@@ -28,44 +28,45 @@ client.once('ready', () => {
 
     updateShopSystem();
 
-    cron.schedule(`0 ${OPEN_HOUR} * * *`, () => updateShopSystem());
-
     const cronCloseHour = CLOSE_HOUR === 24 ? 0 : CLOSE_HOUR;
-    cron.schedule(`0 ${cronCloseHour} * * *`, () => updateShopSystem());
+    cron.schedule(`0 ${cronCloseHour} * * *`, () => updateShopSystem(), {
+        scheduled: true,
+        timezone: "Asia/Bangkok" 
+    });
 });
 
 async function updateShopSystem() {
-    const currentHour = new Date().getHours(); // เวลาปัจจุบัน (0-23)
-    const channel = client.channels.cache.get(CHANNEL_ID);
+    let currentHour = parseInt(new Date().toLocaleString("en-US", { 
+        timeZone: "Asia/Bangkok", 
+        hour: "numeric", 
+        hour12: false 
+    }));
 
+    if (currentHour === 24) currentHour = 0;
+
+    const channel = client.channels.cache.get(CHANNEL_ID);
     if (!channel) {
-        console.log('❌ หาห้องไม่เจอ! เช็ก ID ด้วยครับ');
+        console.log('❌ หาห้องไม่เจอ!');
         return;
     }
-const isOpen = currentHour >= OPEN_HOUR && currentHour < CLOSE_HOUR;
+
+    const isOpen = currentHour >= OPEN_HOUR && currentHour < CLOSE_HOUR;
 
     if (isOpen) {
-        console.log(`สถานะ: เปิด (เวลา ${currentHour}:00)`);
+        console.log(`[เวลาไทย ${currentHour}:00] สถานะ: 🟢-ร้านเปิดเเล้ว`);
+        if (channel.name !== NAME_OPEN) await channel.setName(NAME_OPEN).catch(console.error);
         
-        if (channel.name !== NAME_OPEN) {
-            await channel.setName(NAME_OPEN).catch(err => console.log('ติด Rate Limit เปลี่ยนชื่อไม่ได้:', err.message));
-        }
-
         client.user.setPresence({
-            activities: [{ name: '🟢 ร้านเปิดแล้ว', type: ActivityType.Streaming, url: 'https://www.twitch.tv/star_ssr' }],
+            activities: [{ name: 'ร้านเปิดแล้วครับ ☀️', type: ActivityType.Playing }],
             status: 'online',
         });
-
     } else {
-        console.log(`สถานะ: ปิด (เวลา ${currentHour}:00)`);
-
-        if (channel.name !== NAME_CLOSE) {
-            await channel.setName(NAME_CLOSE).catch(err => console.log('ติด Rate Limit เปลี่ยนชื่อไม่ได้:', err.message));
-        }
-
+        console.log(`[เวลาไทย ${currentHour}:00] สถานะ: 🔴-ร้านปิด-เปิดตอน7โมง`);
+        if (channel.name !== NAME_CLOSE) await channel.setName(NAME_CLOSE).catch(console.error);
+        
         client.user.setPresence({
-            activities: [{ name: '🔴 ร้านปิดแล้ว', type: ActivityType.Streaming, url: 'https://www.twitch.tv/star_ssr' }],
-            status: 'onlined',
+            activities: [{ name: 'ร้านปิดแล้ว 💤', type: ActivityType.Listening }],
+            status: 'dnd',
         });
     }
 }
